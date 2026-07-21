@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="420" role="img" aria-label="GitHub Personal Stats placeholder">
+  <rect width="1000" height="420" rx="16" fill="#0d1117"/>
+  <text x="500" y="210" fill="#8b949e" font-family="sans-serif" font-size="24" text-anchor="middle">Generating public GitHub stats...</text>
+</svg>

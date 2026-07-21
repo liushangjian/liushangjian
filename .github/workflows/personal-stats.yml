@@ -1,0 +1,79 @@
+name: Update GitHub Personal Stats
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      has_svg: ${{ steps.check.outputs.has_svg }}
+    steps:
+      - name: Generate public dashboard
+        uses: liuchong/github-personal-stats@4053135f20df7744aa2f80ab4a24f19555728434
+        with:
+          card: dashboard
+          version: v1.0.1
+          path: profile/github-personal-stats.svg
+          # Explicitly use the job-scoped temporary token.
+          # Do NOT pass a personal PAT: this keeps private/company repos out of scope.
+          token: ${{ github.token }}
+          options: >-
+            --user ${{ github.repository_owner }}
+            --width 1000
+            --height 420
+
+      - name: Check generated SVG
+        id: check
+        run: |
+          if [ -f profile/github-personal-stats.svg ]; then
+            echo "has_svg=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_svg=false" >> "$GITHUB_OUTPUT"
+            echo "SVG was not generated"
+            exit 1
+          fi
+
+      - name: Upload generated SVG
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: github-personal-stats-svg
+          path: profile/github-personal-stats.svg
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: generate
+    if: needs.generate.outputs.has_svg == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout profile repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: true
+
+      - name: Download generated SVG
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: github-personal-stats-svg
+          path: profile
+
+      - name: Commit updated SVG
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add profile/github-personal-stats.svg
+          if git diff --cached --quiet; then
+            echo "No stats changes; skip commit"
+            exit 0
+          fi
+          git commit -m "更新公开个人统计卡片，仅基于公开仓库数据刷新主页展示"
+          git push
